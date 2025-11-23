@@ -54,8 +54,14 @@ RUN . "$NVM_DIR/nvm.sh" && \
 # ============================================
 # Set Node environment variables
 # ============================================
-ENV NODE_PATH="$NVM_DIR/versions/node/v${NODE_VERSION}/lib/node_modules"
-ENV PATH="$NVM_DIR/versions/node/v${NODE_VERSION}/bin:$PATH"
+# Get the actual installed Node version and set PATH
+RUN . "$NVM_DIR/nvm.sh" && \
+    NODE_VERSION_FULL=$(node --version | sed 's/v//') && \
+    echo "export PATH=\"$NVM_DIR/versions/node/v${NODE_VERSION_FULL}/bin:\$PATH\"" >> ~/.bashrc && \
+    echo "export NODE_PATH=\"$NVM_DIR/versions/node/v${NODE_VERSION_FULL}/lib/node_modules\"" >> ~/.bashrc
+
+ENV PATH="$NVM_DIR/versions/node/v20.19.5/bin:$PATH"
+ENV NODE_PATH="$NVM_DIR/versions/node/v20.19.5/lib/node_modules"
 
 # ============================================
 # Metadata
