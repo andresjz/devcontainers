@@ -1,0 +1,49 @@
+# SSH Configuration for Git Services
+# Place this in ~/.ssh/config
+
+# GitHub
+Host github.com
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_github
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+
+# GitHub (alternative name)
+Host gh
+    HostName github.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_github
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+
+# GitLab
+Host gitlab.com
+    HostName gitlab.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_gitlab
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+
+# GitLab (alternative name)
+Host gl
+    HostName gitlab.com
+    User git
+    IdentityFile ~/.ssh/id_ed25519_gitlab
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+
+# Bitbucket
+Host bitbucket.org
+    HostName bitbucket.org
+    User git
+    IdentityFile ~/.ssh/id_ed25519_bitbucket
+    AddKeysToAgent yes
+    IdentitiesOnly yes
+
+# Generic settings for all hosts
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    TCPKeepAlive yes
+    Compression yes

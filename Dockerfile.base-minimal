@@ -37,6 +37,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     netcat \
     iputils-ping \
     dnsutils \
+    # SSH client
+    openssh-client \
     # Process management
     sudo \
     htop \

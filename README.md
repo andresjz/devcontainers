@@ -350,6 +350,151 @@ nvm use 18
 ### Agregar Herramientas Personalizadas
 
 ```dockerfile
+# .devcontainer/Dockerfile
+FROM ghcr.io/YOUR_USERNAME/devcontainer-base-full:latest
+
+USER root
+RUN apt-get update && apt-get install -y redis-tools && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+USER vscode
+```
+
+## 🔑 Configuración SSH para Git
+
+Las imágenes incluyen soporte para autenticación SSH con servicios Git. Esto es útil para:
+- Clonar repositorios privados sin contraseña
+- Commits firmados con SSH
+- Mejor seguridad que HTTPS
+
+### Setup Rápido
+
+Desde el devcontainer, ejecuta:
+
+```bash
+# Ejecutar el script de configuración interactivo
+bash /workspace/dotfiles/setup-ssh.sh
+```
+
+El script te guiará para:
+1. Generar claves SSH (ed25519) para GitHub, GitLab, o Bitbucket
+2. Configurar `~/.ssh/config` automáticamente
+3. Mostrarte las claves públicas para copiar a tus servicios
+
+### Setup Manual
+
+#### 1. Generar Clave SSH
+
+```bash
+# Generar clave para GitHub
+ssh-keygen -t ed25519 -C "tu@email.com" -f ~/.ssh/id_ed25519_github
+
+# Generar clave para GitLab
+ssh-keygen -t ed25519 -C "tu@email.com" -f ~/.ssh/id_ed25519_gitlab
+```
+
+#### 2. Copiar Clave Pública
+
+```bash
+# Ver tu clave pública
+cat ~/.ssh/id_ed25519_github.pub
+
+# Copiarla al clipboard (si estás en Mac host)
+cat ~/.ssh/id_ed25519_github.pub | pbcopy
+```
+
+Agrega la clave a:
+- **GitHub**: https://github.com/settings/keys
+- **GitLab**: https://gitlab.com/-/profile/keys
+- **Bitbucket**: https://bitbucket.org/account/settings/ssh-keys/
+
+#### 3. Configurar SSH Config
+
+El archivo `~/.ssh/config` ya está pre-configurado desde el template. Si necesitas ajustarlo:
+
+```bash
+# Editar config
+vim ~/.ssh/config
+```
+
+#### 4. Probar Conexión
+
+```bash
+# Probar GitHub
+ssh -T git@github.com
+# Debe responder: "Hi USERNAME! You've successfully authenticated..."
+
+# Probar GitLab
+ssh -T git@gitlab.com
+
+# Ver claves cargadas en el agente
+ssh-add -l
+```
+
+### Aliases SSH Disponibles
+
+```bash
+sshls          # Listar archivos en ~/.ssh/
+sshconfig      # Editar ~/.ssh/config
+sshtest-gh     # Probar conexión con GitHub
+sshtest-gl     # Probar conexión con GitLab
+sshtest-bb     # Probar conexión con Bitbucket
+sshadd         # Agregar todas las claves al agente
+sshkeys        # Listar claves en el agente
+```
+
+### Persistencia de Claves
+
+Las claves SSH se almacenan en `~/.ssh/` dentro del contenedor. Para persistirlas:
+
+#### Opción 1: Volume Mount (Recomendado para desarrollo local)
+
+```json
+// .devcontainer/devcontainer.json
+{
+  "mounts": [
+    "source=${localEnv:HOME}/.ssh,target=/home/vscode/.ssh,type=bind,consistency=cached"
+  ]
+}
+```
+
+#### Opción 2: Docker Volume (Para CI/CD o múltiples proyectos)
+
+```yaml
+# docker-compose.yml
+services:
+  app:
+    volumes:
+      - ssh-keys:/home/vscode/.ssh
+
+volumes:
+  ssh-keys:
+```
+
+#### Opción 3: GitHub Codespaces / Secretos
+
+GitHub Codespaces sincroniza automáticamente tus claves SSH si están configuradas en:
+https://github.com/settings/codespaces
+
+### Uso con Git
+
+Una vez configurado SSH, puedes usar URLs SSH:
+
+```bash
+# Clonar con SSH
+git clone git@github.com:usuario/repo.git
+
+# Cambiar remote de HTTPS a SSH
+git remote set-url origin git@github.com:usuario/repo.git
+
+# Commits firmados con SSH (opcional)
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519_github.pub
+git config --global commit.gpgsign true
+```
+
+
+```dockerfile
 # Extender la imagen
 FROM ghcr.io/YOUR_USERNAME/devcontainer-base-full:latest
 

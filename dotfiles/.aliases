@@ -102,3 +102,14 @@ alias json='jq .'
 
 # YAML validation
 alias yamlcheck='yq eval'
+
+# ============================================
+# SSH Aliases
+# ============================================
+alias sshls='ls -la ~/.ssh/'
+alias sshconfig='vim ~/.ssh/config'
+alias sshtest-gh='ssh -T git@github.com'
+alias sshtest-gl='ssh -T git@gitlab.com'
+alias sshtest-bb='ssh -T git@bitbucket.org'
+alias sshadd='ssh-add ~/.ssh/id_ed25519_github ~/.ssh/id_ed25519_gitlab ~/.ssh/id_ed25519_bitbucket 2>/dev/null'
+alias sshkeys='ssh-add -l'

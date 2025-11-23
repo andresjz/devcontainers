@@ -1,0 +1,65 @@
+# ============================================
+# DevContainer Base Java Image
+# Extends minimal with Java development tools via SDKMAN
+# ============================================
+
+ARG BASE_IMAGE=devcontainer-base-minimal:latest
+FROM ${BASE_IMAGE}
+
+# Switch to root for system packages
+USER root
+
+# Install Java build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    zip \
+    unzip \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# Switch back to non-root user
+# ============================================
+USER vscode
+WORKDIR /home/vscode
+
+# ============================================
+# Install SDKMAN
+# ============================================
+ENV SDKMAN_DIR="/home/vscode/.sdkman"
+
+RUN curl -s "https://get.sdkman.io" | bash && \
+    echo 'export SDKMAN_DIR="$HOME/.sdkman"' >> ~/.bashrc && \
+    echo '[[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"' >> ~/.bashrc
+
+# ============================================
+# Install Java 21 (LTS), Maven, and Gradle
+# ============================================
+RUN bash -c "source $SDKMAN_DIR/bin/sdkman-init.sh && \
+    sdk install java 21.0.5-tem && \
+    sdk install maven && \
+    sdk install gradle && \
+    sdk flush archives && \
+    sdk flush temp"
+
+# ============================================
+# Set Java environment variables
+# ============================================
+# Get the actual installed Java version and set PATH
+RUN bash -c "source $SDKMAN_DIR/bin/sdkman-init.sh && \
+    JAVA_HOME_PATH=\$(sdk home java 21.0.5-tem) && \
+    echo \"export JAVA_HOME=\$JAVA_HOME_PATH\" >> ~/.bashrc && \
+    echo \"export PATH=\$JAVA_HOME/bin:\$SDKMAN_DIR/candidates/maven/current/bin:\$SDKMAN_DIR/candidates/gradle/current/bin:\$PATH\" >> ~/.bashrc"
+
+# Set environment variables for container runtime
+ENV JAVA_HOME="$SDKMAN_DIR/candidates/java/current"
+ENV PATH="$SDKMAN_DIR/candidates/java/current/bin:$SDKMAN_DIR/candidates/maven/current/bin:$SDKMAN_DIR/candidates/gradle/current/bin:$PATH"
+
+# ============================================
+# Metadata
+# ============================================
+LABEL org.opencontainers.image.title="DevContainer Base Java"
+LABEL org.opencontainers.image.description="Java development image with SDKMAN, Java 21, Maven, and Gradle"
+LABEL org.opencontainers.image.vendor="Personal"
+LABEL maintainer="luism1"
+
+WORKDIR /workspace
+CMD ["sleep", "infinity"]
