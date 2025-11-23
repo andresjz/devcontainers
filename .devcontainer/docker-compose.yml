@@ -1,0 +1,16 @@
+services:
+  app:
+    # build:
+    #   context: ..
+    #   dockerfile: Dockerfile.base-full
+    image: devcontainer-base-full:latest
+    volumes:
+      - ..:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: sleep infinity
+    environment:
+      - TZ=America/Santiago
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined

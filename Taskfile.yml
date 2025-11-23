@@ -1,0 +1,230 @@
+version: '3'
+
+vars:
+  GITHUB_USERNAME: '{{.GITHUB_USERNAME | default "YOUR_USERNAME"}}'
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: '{{.REGISTRY}}/{{.GITHUB_USERNAME}}/devcontainer-base'
+
+tasks:
+  # ============================================
+  # Build Tasks (Paso 1)
+  # ============================================
+  
+  build:minimal:
+    desc: Build base-minimal image
+    cmds:
+      - echo "🔨 Building base-minimal for current platform..."
+      - docker buildx build --platform linux/arm64 --load -f Dockerfile.base-minimal -t devcontainer-base-minimal:latest .
+      - echo "✅ base-minimal built successfully!"
+
+  build:python:
+    desc: Build base-python image
+    deps: [build:minimal]
+    cmds:
+      - echo "🐍 Building base-python for current platform..."
+      - docker build -f Dockerfile.base-python --build-arg BASE_IMAGE=devcontainer-base-minimal:latest -t devcontainer-base-python:latest .
+      - echo "✅ base-python built successfully!"
+
+  build:node:
+    desc: Build base-node image
+    deps: [build:minimal]
+    cmds:
+      - echo "📦 Building base-node for current platform..."
+      - docker build -f Dockerfile.base-node --build-arg BASE_IMAGE=devcontainer-base-minimal:latest -t devcontainer-base-node:latest .
+      - echo "✅ base-node built successfully!"
+
+  build:full:
+    desc: Build base-full image
+    deps: [build:minimal]
+    cmds:
+      - echo "🚀 Building base-full for current platform..."
+      - docker build -f Dockerfile.base-full --build-arg BASE_IMAGE=devcontainer-base-minimal:latest -t devcontainer-base-full:latest .
+      - echo "✅ base-full built successfully!"
+
+  build:all:
+    desc: Build all images
+    cmds:
+      - task: build:minimal
+      - task: build:python
+      - task: build:node
+      - task: build:full
+      - echo ""
+      - echo "✅ All images built successfully!"
+      - docker images | grep devcontainer-base
+
+  # ============================================
+  # Publish Tasks (Paso 3)
+  # ============================================
+
+  publish:login:
+    desc: Login to GitHub Container Registry
+    cmds:
+      - echo "🔐 Logging in to {{.REGISTRY}}..."
+      - echo $GITHUB_TOKEN | docker login {{.REGISTRY}} -u {{.GITHUB_USERNAME}} --password-stdin
+    preconditions:
+      - sh: test -n "$GITHUB_TOKEN"
+        msg: "GITHUB_TOKEN environment variable is required"
+
+  publish:tag:
+    desc: Tag all images for GHCR
+    deps: [build:all]
+    cmds:
+      - echo "🏷️  Tagging images for {{.IMAGE_PREFIX}}..."
+      - docker tag devcontainer-base-minimal:latest {{.IMAGE_PREFIX}}-minimal:latest
+      - docker tag devcontainer-base-python:latest {{.IMAGE_PREFIX}}-python:latest
+      - docker tag devcontainer-base-node:latest {{.IMAGE_PREFIX}}-node:latest
+      - docker tag devcontainer-base-full:latest {{.IMAGE_PREFIX}}-full:latest
+      - echo "✅ All images tagged!"
+
+  publish:push:
+    desc: Push all images to GHCR
+    deps: [publish:login, publish:tag]
+    cmds:
+      - echo "📤 Pushing images to {{.REGISTRY}}..."
+      - docker push {{.IMAGE_PREFIX}}-minimal:latest
+      - docker push {{.IMAGE_PREFIX}}-python:latest
+      - docker push {{.IMAGE_PREFIX}}-node:latest
+      - docker push {{.IMAGE_PREFIX}}-full:latest
+      - echo "✅ All images pushed successfully!"
+
+  publish:all:
+    desc: Build, tag, and push all images to GHCR
+    cmds:
+      - task: build:all
+      - task: publish:login
+      - task: publish:tag
+      - task: publish:push
+
+  # ============================================
+  # Setup in Projects Tasks (Paso 4)
+  # ============================================
+
+  setup:init-repo:
+    desc: Initialize git repo and push to GitHub
+    cmds:
+      - echo "📦 Initializing git repository..."
+      - git init
+      - git add .
+      - git commit -m "feat - Initial devcontainer base images with DinD"
+      - echo "🚀 Creating GitHub repository..."
+      - gh repo create devcontainer-base --public --source=. --remote=origin --push
+      - echo "✅ Repository created and pushed!"
+    status:
+      - test -d .git
+
+  setup:copy-to-project:
+    desc: Copy devcontainer config to a project (usage - task setup:copy-to-project PROJECT=../path/to/project)
+    cmds:
+      - echo "📋 Copying devcontainer config to {{.PROJECT}}..."
+      - cp -r .devcontainer {{.PROJECT}}/.devcontainer
+      - echo "✅ DevContainer config copied!"
+      - echo "📝 Remember to update docker-compose.yml with your GitHub username"
+    preconditions:
+      - sh: test -n "{{.PROJECT}}"
+        msg: "PROJECT variable is required. Usage: task setup:copy-to-project PROJECT=../path/to/project"
+      - sh: test -d "{{.PROJECT}}"
+        msg: "Project directory {{.PROJECT}} does not exist"
+
+  setup:copy-simple:
+    desc: Copy simple devcontainer config (no docker-compose) to a project
+    cmds:
+      - echo "📋 Copying simple devcontainer config to {{.PROJECT}}..."
+      - cp -r .devcontainer-simple {{.PROJECT}}/.devcontainer
+      - echo "✅ Simple DevContainer config copied!"
+      - echo "📝 Remember to update devcontainer.json with your GitHub username"
+    preconditions:
+      - sh: test -n "{{.PROJECT}}"
+        msg: "PROJECT variable is required. Usage: task setup:copy-simple PROJECT=../path/to/project"
+      - sh: test -d "{{.PROJECT}}"
+        msg: "Project directory {{.PROJECT}} does not exist"
+
+  setup:update-project-image:
+    desc: Update docker-compose.yml in a project with GHCR image
+    vars:
+      COMPOSE_FILE: '{{.PROJECT}}/.devcontainer/docker-compose.yml'
+    cmds:
+      - echo "🔄 Updating image in {{.COMPOSE_FILE}}..."
+      - |
+        sed -i.bak "s|build:|# build:|g" {{.COMPOSE_FILE}}
+        sed -i.bak "/# build:/a\\
+        \    image: {{.IMAGE_PREFIX}}-full:latest" {{.COMPOSE_FILE}}
+      - rm {{.COMPOSE_FILE}}.bak
+      - echo "✅ Image updated to {{.IMAGE_PREFIX}}-full:latest"
+    preconditions:
+      - sh: test -n "{{.PROJECT}}"
+        msg: "PROJECT variable is required"
+      - sh: test -f "{{.COMPOSE_FILE}}"
+        msg: "docker-compose.yml not found in {{.PROJECT}}/.devcontainer/"
+
+  # ============================================
+  # Utility Tasks
+  # ============================================
+
+  clean:
+    desc: Remove all local devcontainer images
+    cmds:
+      - echo "🧹 Removing local devcontainer images..."
+      - docker rmi devcontainer-base-minimal:latest || true
+      - docker rmi devcontainer-base-python:latest || true
+      - docker rmi devcontainer-base-node:latest || true
+      - docker rmi devcontainer-base-full:latest || true
+      - echo "✅ Local images removed!"
+
+  clean:all:
+    desc: Remove all local and GHCR tagged images
+    deps: [clean]
+    cmds:
+      - echo "🧹 Removing GHCR tagged images..."
+      - docker rmi {{.IMAGE_PREFIX}}-minimal:latest || true
+      - docker rmi {{.IMAGE_PREFIX}}-python:latest || true
+      - docker rmi {{.IMAGE_PREFIX}}-node:latest || true
+      - docker rmi {{.IMAGE_PREFIX}}-full:latest || true
+      - echo "✅ All images removed!"
+
+  list:
+    desc: List all devcontainer images
+    cmds:
+      - echo "📦 DevContainer Base Images:"
+      - docker images | grep -E "(REPOSITORY|devcontainer-base)" || echo "No images found"
+
+  test:
+    desc: Test the base-full image by running a container
+    deps: [build:full]
+    cmds:
+      - echo "🧪 Testing base-full image..."
+      - docker run --rm devcontainer-base-full:latest python --version
+      - docker run --rm devcontainer-base-full:latest node --version
+      - docker run --rm devcontainer-base-full:latest terraform --version
+      - docker run --rm devcontainer-base-full:latest aws --version
+      - docker run --rm devcontainer-base-full:latest gh --version
+      - docker run --rm devcontainer-base-full:latest task --version
+      - echo "✅ All tools working correctly!"
+
+  help:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  # ============================================
+  # Quick Start Tasks
+  # ============================================
+
+  dev:
+    desc: Quick dev setup - build and test
+    cmds:
+      - task: build:all
+      - task: test
+      - task: list
+
+  deploy:
+    desc: Full deployment - build, test, and push to GHCR
+    cmds:
+      - task: build:all
+      - task: test
+      - task: publish:all
+      - echo ""
+      - echo "🎉 Deployment complete! Your images are now available at:"
+      - echo "  - {{.IMAGE_PREFIX}}-minimal:latest"
+      - echo "  - {{.IMAGE_PREFIX}}-python:latest"
+      - echo "  - {{.IMAGE_PREFIX}}-node:latest"
+      - echo "  - {{.IMAGE_PREFIX}}-full:latest"

@@ -1,0 +1,60 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# DevContainer configs (don't include in base image)
+.devcontainer/
+.devcontainer-simple/
+
+# GitHub
+.github/
+
+# Documentation
+README.md
+*.md
+docs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Testing
+tests/
+test/
+__tests__/
+*.test.*
+*.spec.*
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Dependencies (we install fresh in container)
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

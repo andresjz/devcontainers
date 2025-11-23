@@ -1,0 +1,78 @@
+# ============================================
+# DevContainer Base Python Image
+# Extends minimal with Python development tools
+# ============================================
+
+ARG BASE_IMAGE=devcontainer-base-minimal:latest
+FROM ${BASE_IMAGE}
+
+# Switch to root for installations
+USER root
+
+# ============================================
+# Install Python build dependencies
+# ============================================
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    xz-utils \
+    tk-dev \
+    libffi-dev \
+    liblzma-dev \
+    python3-openssl \
+    llvm \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ============================================
+# Switch back to non-root user
+# ============================================
+USER vscode
+WORKDIR /home/vscode
+
+# ============================================
+# Install pyenv
+# ============================================
+ENV PYENV_ROOT="/home/vscode/.pyenv"
+ENV PATH="$PYENV_ROOT/bin:$PATH"
+
+RUN curl https://pyenv.run | bash
+
+# Add pyenv to shell (already in .zshrc from base, but set for build)
+RUN echo 'eval "$(pyenv init -)"' >> ~/.bashrc
+
+# ============================================
+# Install Python 3.12.3
+# ============================================
+RUN eval "$(pyenv init -)" && pyenv install 3.12.3 && pyenv global 3.12.3
+
+# ============================================
+# Install common Python tools
+# ============================================
+RUN eval "$(pyenv init -)" && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir \
+    pipenv \
+    poetry \
+    virtualenv \
+    black \
+    flake8 \
+    pylint \
+    mypy \
+    pytest \
+    ipython
+
+# ============================================
+# Metadata
+# ============================================
+LABEL org.opencontainers.image.title="DevContainer Base Python"
+LABEL org.opencontainers.image.description="Python development image with pyenv and Python 3.12.3"
+LABEL org.opencontainers.image.vendor="Personal"
+LABEL maintainer="luism1"
+
+WORKDIR /workspace
+CMD ["sleep", "infinity"]

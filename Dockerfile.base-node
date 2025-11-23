@@ -1,0 +1,69 @@
+# ============================================
+# DevContainer Base Node Image
+# Extends minimal with Node.js development tools
+# ============================================
+
+ARG BASE_IMAGE=devcontainer-base-minimal:latest
+FROM ${BASE_IMAGE}
+
+# Switch to root for any system packages (if needed)
+USER root
+
+# No additional system packages needed for Node.js
+
+# ============================================
+# Switch back to non-root user
+# ============================================
+USER vscode
+WORKDIR /home/vscode
+
+# ============================================
+# Install NVM (Node Version Manager)
+# ============================================
+ENV NVM_DIR="/home/vscode/.nvm"
+ENV NODE_VERSION=20
+
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+
+# Add nvm to shell (already in .zshrc from base, but set for build)
+RUN echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc
+
+# ============================================
+# Install Node.js 20
+# ============================================
+RUN . "$NVM_DIR/nvm.sh" && \
+    nvm install ${NODE_VERSION} && \
+    nvm alias default ${NODE_VERSION} && \
+    nvm use default
+
+# ============================================
+# Install global npm packages
+# ============================================
+RUN . "$NVM_DIR/nvm.sh" && \
+    npm install -g \
+    yarn \
+    pnpm \
+    typescript \
+    ts-node \
+    nodemon \
+    eslint \
+    prettier \
+    pm2
+
+# ============================================
+# Set Node environment variables
+# ============================================
+ENV NODE_PATH="$NVM_DIR/versions/node/v${NODE_VERSION}/lib/node_modules"
+ENV PATH="$NVM_DIR/versions/node/v${NODE_VERSION}/bin:$PATH"
+
+# ============================================
+# Metadata
+# ============================================
+LABEL org.opencontainers.image.title="DevContainer Base Node"
+LABEL org.opencontainers.image.description="Node.js development image with nvm and Node.js 20"
+LABEL org.opencontainers.image.vendor="Personal"
+LABEL maintainer="luism1"
+
+WORKDIR /workspace
+CMD ["sleep", "infinity"]

@@ -1,0 +1,36 @@
+{
+  "name": "DevContainer Simple (No Compose)",
+  "image": "ghcr.io/YOUR_GITHUB_USERNAME/devcontainer-base-full:latest",
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "workspaceFolder": "/workspace",
+  "postCreateCommand": "echo '✅ DevContainer ready!'",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "dbaeumer.vscode-eslint",
+        "eamodio.gitlens",
+        "ms-azuretools.vscode-docker",
+        "hashicorp.terraform",
+        "task.vscode-task"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/bin/zsh"
+          }
+        }
+      }
+    }
+  },
+  "remoteUser": "vscode",
+  "capAdd": ["SYS_PTRACE"],
+  "securityOpt": ["seccomp=unconfined"],
+  "containerEnv": {
+    "TZ": "America/Mexico_City"
+  }
+}
